@@ -1,0 +1,21 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: >
+  Provides HTTPS subscription to SNS topic functionality, which is missing in Terraform
+
+Parameters:
+  EndpointUrl:
+    Description: URL of HTTPS endpoint to subscribe to topic.
+    Type: String
+
+  TopicArn:
+    Description: ARN of SNS topic that needs subscribing.
+    Type: String
+
+Resources:
+  HttpsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !Ref "EndpointUrl"
+      Protocol: https
+      TopicArn: !Ref "TopicArn"

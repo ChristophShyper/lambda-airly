@@ -1,0 +1,21 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: >
+  Provides email subscription to SNS topic functionality, which is missing in Terraform.
+
+Parameters:
+  EmailAddress:
+    Description: Email address that needs to subscribe to topic.
+    Type: String
+
+  TopicArn:
+    Description: ARN of SNS topic that needs subscribing.
+    Type: String
+
+Resources:
+  EmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !Ref "EmailAddress"
+      Protocol: email
+      TopicArn: !Ref "TopicArn"
