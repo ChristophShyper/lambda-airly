@@ -102,3 +102,15 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# intellij
+lambda-airly.iml
+.idea
+
+# lambda
+/source/.dist
+
+# terraform
+/terraform/terraform.tfstate*
+/terraform/.terraform*
+#/terraform/secrets.tfvars
