@@ -2,7 +2,6 @@ import json
 import os
 import requests
 
-
 # parameters in env vars passed by Terraform during deployment
 max_distance = os.environ.get('MAX_DISTANCE')
 api_key = os.environ.get('API_KEY')
@@ -46,6 +45,62 @@ def set_parameters(location, distance):
     return parameters
 
 
+def prepare_response(payload):
+    response = {'index': []}
+    for index in payload['current']['indexes']:
+        response['index'].append({
+            'name': index['name'],
+            'level': index['level'],
+            'description': '{descr} {adv}'.format(
+                descr=index['description'],
+                adv=index['advice'],
+            )
+        })
+    response['pollutants'] = []
+    for poll in pollutants:
+        if poll['name'] in [value['name'] for value in payload['current']['values']]:
+            percentage_available = True if poll['name'] in [standard['pollutant'] for standard in
+                                                            payload['current']['standards']] else False
+            percentage = str([standard['percent'] for standard in payload['current']['standards'] if
+                              standard['pollutant'] == poll['name']][0]) + '%' if percentage_available else ''
+            value = str([value['value'] for value in payload['current']['values'] if value['name'] == poll['name']][
+                            0]) + 'µg/m³'
+            response['pollutants'].append({
+                'symbol': poll['symbol'],
+                'type': poll['type'],
+                'value': value,
+                'percentage': percentage,
+            })
+    temperature_available = True if 'TEMPERATURE' in [value['name'] for value in
+                                                      payload['current']['values']] else False
+    temperature = str([value['value'] for value in payload['current']['values'] if value['name'] == 'TEMPERATURE'][
+                      0]) + '°C' if temperature_available else ''
+    pressure_available = True if 'PRESSURE' in [value['name'] for value in payload['current']['values']] else False
+    pressure = str([value['value'] for value in payload['current']['values'] if value['name'] == 'PRESSURE'][
+                   0]) + 'hPa' if pressure_available else ''
+    humidity_available = True if 'HUMIDITY' in [value['name'] for value in payload['current']['values']] else False
+    humidity = str([value['value'] for value in payload['current']['values'] if value['name'] == 'HUMIDITY'][
+                   0]) + '%' if humidity_available else ''
+    response['weather'] = []
+    response['weather'].append({
+        'symbol': '\U0001F321',
+        'name': 'TEMPERATURE',
+        'value': temperature
+    }) if temperature_available else None
+    response['weather'].append({
+        'symbol': '\U0001F4C8',
+        'name': 'PRESSURE',
+        'value': pressure
+    }) if pressure_available else None
+    response['weather'].append({
+        'symbol': '\U0001F4A7',
+        'name': 'HUMIDITY',
+        'value': humidity
+    }) if humidity_available else None
+    print('resp: {}'.format(response))
+    return response
+
+
 def prepare_message(payload):
     message = ''
     for index in payload['current']['indexes']:
@@ -55,11 +110,23 @@ def prepare_message(payload):
             descr=index['description'],
             adv=index['advice'],
         )
+        output['index'].append({
+            'name': index['name'],
+            'level': index['level'],
+            'description': '{descr} {adv}'.format(
+                descr=index['description'],
+                adv=index['advice'],
+            )
+        })
+    output['pollutants'] = []
     for poll in pollutants:
         if poll['name'] in [value['name'] for value in payload['current']['values']]:
-            percentage_available = True if poll['name'] in [standard['pollutant'] for standard in payload['current']['standards']] else False
-            percentage = '(' + str([standard['percent'] for standard in payload['current']['standards'] if standard['pollutant'] == poll['name']][0]) + '%)' if percentage_available else ''
-            value = str([value['value'] for value in payload['current']['values'] if value['name'] == poll['name']][0]) + 'µg/m³'
+            percentage_available = True if poll['name'] in [standard['pollutant'] for standard in
+                                                            payload['current']['standards']] else False
+            percentage = '(' + str([standard['percent'] for standard in payload['current']['standards'] if
+                                    standard['pollutant'] == poll['name']][0]) + '%)' if percentage_available else ''
+            value = str([value['value'] for value in payload['current']['values'] if value['name'] == poll['name']][
+                            0]) + 'µg/m³'
             message += '{ico} {poll}: {val} {perc}{sep}'.format(
                 ico=poll['symbol'],
                 poll=poll['type'],
@@ -67,25 +134,31 @@ def prepare_message(payload):
                 perc=percentage,
                 sep='\n',
             )
-    temperature_available = True if 'TEMPERATURE' in [value['name'] for value in payload['current']['values']] else False
-    temperature = [value['value'] for value in payload['current']['values'] if value['name'] == 'TEMPERATURE'][0] if temperature_available else ''
+            output['pollutants'].append()
+    temperature_available = True if 'TEMPERATURE' in [value['name'] for value in
+                                                      payload['current']['values']] else False
+    temperature = [value['value'] for value in payload['current']['values'] if value['name'] == 'TEMPERATURE'][
+        0] if temperature_available else ''
     pressure_available = True if 'PRESSURE' in [value['name'] for value in payload['current']['values']] else False
-    pressure = [value['value'] for value in payload['current']['values'] if value['name'] == 'PRESSURE'][0] if pressure_available else ''
+    pressure = [value['value'] for value in payload['current']['values'] if value['name'] == 'PRESSURE'][
+        0] if pressure_available else ''
     humidity_available = True if 'HUMIDITY' in [value['name'] for value in payload['current']['values']] else False
-    humidity = [value['value'] for value in payload['current']['values'] if value['name'] == 'HUMIDITY'][0] if humidity_available else ''
+    humidity = [value['value'] for value in payload['current']['values'] if value['name'] == 'HUMIDITY'][
+        0] if humidity_available else ''
     message += '\U0001F321 TEMPERATURE: {}°C \n'.format(temperature) if temperature_available else ''
     message += '\U0001F4C8 PRESSURE: {} hPa \n'.format(pressure) if pressure_available else ''
     message += '\U0001F4A7 HUMIDITY: {}% \n'.format(humidity) if temperature_available else ''
-    return message
+    print(message)
+    return message, output
 
 
 def handler(event, context):
     # print("Event: {}".format(event))
     params = set_parameters(locations[0]['latlng'], max_distance)
-    response = call_airly_api(api_key, measurements, params)
-    message = prepare_message(response)
-    print("{}".format(message))
-    return message
+    payload = call_airly_api(api_key, measurements, params)
+    response = prepare_response(payload)
+    # print("{}".format(message))
+    return payload
 
 
 # call from outside only locally for testing
