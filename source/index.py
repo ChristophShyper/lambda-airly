@@ -14,6 +14,13 @@ pollutants = [
     {'name': 'PM25', 'type': 'PM2.5', 'symbol': '\u2592'},
     {'name': 'PM1', 'type': 'PM1.0', 'symbol': '\u2591'},
 ]
+index_levels = [
+    {'name': 'VERY_LOW', 'symbol': '\U0001F600'},
+    {'name': 'LOW', 'symbol': '\U0001F609'},
+    {'name': 'MEDIUM', 'symbol': '\U0001F612'},
+    {'name': 'HIGH', 'symbol': '\U0001F616'},
+    {'name': 'VERY_HIGH', 'symbol': '\U0001F621'}
+]
 
 # test parameters TODO: delete
 test_file = 'test.json'
@@ -45,12 +52,14 @@ def set_parameters(location, distance):
     return parameters
 
 
+# returns slick dict based on airly api response
 def prepare_response(payload):
-    response = {'index': []}
+    response = {'indexes': []}
     for index in payload['current']['indexes']:
-        response['index'].append({
+        response['indexes'].append({
             'name': index['name'],
             'level': index['level'],
+            'symbol': [index_level['symbol'] for index_level in index_levels if index_level['name'] == index['level']][0],
             'description': '{descr} {adv}'.format(
                 descr=index['description'],
                 adv=index['advice'],
@@ -97,67 +106,48 @@ def prepare_response(payload):
         'name': 'HUMIDITY',
         'value': humidity
     }) if humidity_available else None
-    print('resp: {}'.format(response))
     return response
 
 
+# returns message for displaying
 def prepare_message(payload):
     message = ''
-    for index in payload['current']['indexes']:
-        message += '{name}: {level} - {descr} {adv}\n'.format(
+    for index in payload['indexes']:
+        message += '{ico} {name}: {level} - {descr}{sep}'.format(
+            ico=index['symbol'],
             name=index['name'],
             level=index['level'],
             descr=index['description'],
-            adv=index['advice'],
+            sep='\n',
         )
-        output['index'].append({
-            'name': index['name'],
-            'level': index['level'],
-            'description': '{descr} {adv}'.format(
-                descr=index['description'],
-                adv=index['advice'],
-            )
-        })
-    output['pollutants'] = []
-    for poll in pollutants:
-        if poll['name'] in [value['name'] for value in payload['current']['values']]:
-            percentage_available = True if poll['name'] in [standard['pollutant'] for standard in
-                                                            payload['current']['standards']] else False
-            percentage = '(' + str([standard['percent'] for standard in payload['current']['standards'] if
-                                    standard['pollutant'] == poll['name']][0]) + '%)' if percentage_available else ''
-            value = str([value['value'] for value in payload['current']['values'] if value['name'] == poll['name']][
-                            0]) + 'µg/m³'
-            message += '{ico} {poll}: {val} {perc}{sep}'.format(
-                ico=poll['symbol'],
-                poll=poll['type'],
-                val=value,
-                perc=percentage,
-                sep='\n',
-            )
-            output['pollutants'].append()
-    temperature_available = True if 'TEMPERATURE' in [value['name'] for value in
-                                                      payload['current']['values']] else False
-    temperature = [value['value'] for value in payload['current']['values'] if value['name'] == 'TEMPERATURE'][
-        0] if temperature_available else ''
-    pressure_available = True if 'PRESSURE' in [value['name'] for value in payload['current']['values']] else False
-    pressure = [value['value'] for value in payload['current']['values'] if value['name'] == 'PRESSURE'][
-        0] if pressure_available else ''
-    humidity_available = True if 'HUMIDITY' in [value['name'] for value in payload['current']['values']] else False
-    humidity = [value['value'] for value in payload['current']['values'] if value['name'] == 'HUMIDITY'][
-        0] if humidity_available else ''
-    message += '\U0001F321 TEMPERATURE: {}°C \n'.format(temperature) if temperature_available else ''
-    message += '\U0001F4C8 PRESSURE: {} hPa \n'.format(pressure) if pressure_available else ''
-    message += '\U0001F4A7 HUMIDITY: {}% \n'.format(humidity) if temperature_available else ''
-    print(message)
-    return message, output
+    for poll in payload['pollutants']:
+        percentage_available = True if poll['percentage'] != '' else False
+        percentage = '({})'.format(poll['percentage']) if percentage_available else ''
+        message += '{ico} {poll}: {val} {perc}{sep}'.format(
+            ico=poll['symbol'],
+            poll=poll['type'],
+            val=poll['value'],
+            perc=percentage,
+            sep='\n',
+        )
+    for weather in payload['weather']:
+        message += '{ico} {name}: {val}{sep}'.format(
+            ico=weather['symbol'],
+            name=weather['name'],
+            val=weather['value'],
+            sep='\n',
+        )
+    return message
 
 
+# main lambda handler
 def handler(event, context):
     # print("Event: {}".format(event))
     params = set_parameters(locations[0]['latlng'], max_distance)
     payload = call_airly_api(api_key, measurements, params)
     response = prepare_response(payload)
-    # print("{}".format(message))
+    message = prepare_message(response)
+    print("{}".format(message))
     return payload
 
 
