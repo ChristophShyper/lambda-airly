@@ -54,7 +54,7 @@ variable "aws_secret_key" {
 }
 
 variable "aws_region" {
-  default     = "eu-west-1" # main region in Europa, having most up to dat features
+  default     = "eu-west-1" # main region in Europa, having most up to date features
   description = "Name of AWS region used for deploying infrastructure. String value. Default is \"eu-west-1\"."
   type        = string
 }

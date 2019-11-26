@@ -11,11 +11,7 @@ terraform {
 # AWS provided details used
 # access_key and secret_key, or shared_credentials_file and profile
 provider "aws" {
-  access_key              = local.use_aws_keys ? local.aws_access_key : null
-  profile                 = local.use_aws_credentials_file ? local.aws_profile : null
   region                  = local.aws_region
-  secret_key              = local.use_aws_keys ? local.aws_secret_key : null
-  shared_credentials_file = local.use_aws_credentials_file ? local.aws_credentials_file : null
 }
 
 # define Log Group for Lambda, so it can be deleted when stack is destroy
@@ -48,7 +44,7 @@ resource "null_resource" "package" {
   }
 
   provisioner "local-exec" {
-    command     = "./lambda.sh deploy ${local.function_name} ${local.function_runtime} ${local.aws_profile} ${local.s3_bucket} ${local.s3_key}"
+    command     = "./lambda.sh deploy ${local.function_name} ${local.function_runtime} ${local.s3_bucket} ${local.s3_key}"
     working_dir = "../${local.function_dir}"
   }
 

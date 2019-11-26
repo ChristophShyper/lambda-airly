@@ -9,9 +9,6 @@ locals {
   airly_measurements_nearest_method = var.airly_measurements_nearest_method
   airly_measurements_point_method   = var.airly_measurements_point_method
   airly_use_interpolation           = var.airly_use_interpolation
-  aws_access_key                    = var.aws_access_key
-  aws_credentials_file              = var.aws_credentials_file
-  aws_secret_key                    = var.aws_secret_key
   aws_profile                       = var.aws_profile
   aws_region                        = var.aws_region
   enable_bucket_creation            = var.enable_bucket_creation
@@ -23,8 +20,6 @@ locals {
   function_runtime                  = var.function_runtime
   function_timeout                  = var.function_timeout
   log_retention                     = var.log_retention
-  use_aws_keys                      = var.aws_access_key != "" && var.aws_secret_key != ""
-  use_aws_credentials_file          = var.aws_credentials_file != "" && var.aws_profile != "" && ! local.use_aws_keys
   user_email                        = var.user_email
   user_locations                    = var.user_locations
   user_phone                        = var.user_phone
