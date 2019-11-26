@@ -37,6 +37,9 @@ function deploy_host_part() {
         --rm \
         --volume /${DOCKER_DIR}:${CONT_INSTALL_DIR} \
         --workdir ${CONT_INSTALL_DIR} \
+        --env AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
+        --env AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+        --env AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION} \
         lambci/lambda:build-${RUNTIME} ./lambda.sh deploy ${FUNCTION_NAME} ${RUNTIME} ${S3_BUCKET} ${S3_KEY}
 
     copy_ownership ${HOST_SOURCE_DIR} ${HOST_WORKING_DIR}
@@ -44,8 +47,8 @@ function deploy_host_part() {
         echo "===>   Uploading to: s3://${S3_BUCKET}/${S3_KEY}"
         FILEBASE64SHA256=`openssl dgst -sha256 -binary ${HOST_WORKING_DIR}/${FUNCTION_NAME}.zip | openssl base64`
         TAG_SET="TagSet=[{Key=filebase64sha256,Value=${FILEBASE64SHA256}}]"
-        aws s3 cp ${HOST_WORKING_DIR}/${FUNCTION_NAME}.zip s3://${S3_BUCKET}/${S3_KEY} --profile ${AWS_PROFILE}
-        aws s3api put-object-tagging --bucket ${S3_BUCKET} --key ${S3_KEY} --tagging ${TAG_SET} --profile ${AWS_PROFILE}
+        aws s3 cp ${HOST_WORKING_DIR}/${FUNCTION_NAME}.zip s3://${S3_BUCKET}/${S3_KEY}
+        aws s3api put-object-tagging --bucket ${S3_BUCKET} --key ${S3_KEY} --tagging ${TAG_SET}
     fi
     echo "===>   Finished preparing Lambda: ${FUNCTION_NAME}"
 }
@@ -89,9 +92,8 @@ ACTION=$1
 FUNCTION_NAME=$2
 RUNTIME=$3
 # parameters for deployment
-AWS_PROFILE=$4
-S3_BUCKET=$5
-S3_KEY=$6
+S3_BUCKET=$4
+S3_KEY=$5
 # parameters for running
 EVENT=$4
 SOME_VAR=$5
@@ -107,7 +109,7 @@ HOST_WORKING_DIR=${HOST_SOURCE_DIR}/.dist
 grep -qE "(Microsoft|WSL)" /proc/version
 if [[ $? == 0 ]]; then
     MOUNT_DIR=$(df | grep 'C:' | awk '{print $6}' | sed 's|\/|\\/|g')
-	DOCKER_DIR=$(pwd | sed "s|${MOUNT_DIR}|C:|g")
+	  DOCKER_DIR=$(pwd | sed "s|${MOUNT_DIR}|C:|g")
 else
     DOCKER_DIR=$(pwd)
 fi
