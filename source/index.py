@@ -68,10 +68,8 @@ def prepare_response(payload):
             'name': index['name'],
             'level': index['level'],
             'symbol': [index_level['symbol'] for index_level in index_levels if index_level['name'] == index['level']][0],
-            'description': '{descr} {adv}'.format(
-                descr=index['description'],
-                adv=index['advice'],
-            )
+            'description': index['description'],
+            'advice': index['advice'],
         })
     response['pollutants'] = []
     for poll in pollutants:
@@ -120,13 +118,14 @@ def prepare_response(payload):
 # returns message for displaying
 def prepare_message(payload):
     message = ''
-    payload['indexes'].pop(0)
+    # payload['indexes'].pop(0)
     for index in payload['indexes']:
-        message += '{ico} {name}: {level} - {descr}{sep}'.format(
+        message += '{ico} {name}: {level} - {descr} {adv}{sep}'.format(
             ico=index['symbol'],
             name=index['name'],
             level=index['level'],
             descr=index['description'],
+            adv=index['advice'],
             sep='\n',
         )
     for poll in payload['pollutants']:
@@ -166,7 +165,7 @@ def handler(event, context):
     payload = call_airly_api(api_key, use_interpolation, parameters)
     response = prepare_response(payload)
     print(' -> Returned object:\n{}'.format(response))
-    subject = '{ico} {name}: {level} - {descr}'.format(
+    subject = '{ico} {descr}'.format(
         name=response['indexes'][0]['name'],
         ico=response['indexes'][0]['symbol'],
         level=response['indexes'][0]['level'],
