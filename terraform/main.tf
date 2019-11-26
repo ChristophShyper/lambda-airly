@@ -125,7 +125,7 @@ resource "aws_sns_topic_subscription" "phone" {
 resource "aws_cloudformation_stack" "email" {
   count = local.user_email != "" ? 1 : 0
 
-  name          = ""
+  name          = "${local.function_name}-email-subsription"
   template_body = file("cloudformation.email.subscribe.yml")
   parameters = {
     EmailAddress = local.user_email
@@ -137,7 +137,7 @@ resource "aws_cloudformation_stack" "email" {
   tags = merge({ terraform_resource = "aws_cloudformation_stack.email", terraform_count = count.index }, local.common_tags)
 }
 
-# cw event rule to trigger lambda periodically
+# cw event rule to allow triggering lambda periodically
 resource "aws_cloudwatch_event_rule" "event" {
   count = length(local.user_locations)
 
@@ -146,6 +146,14 @@ resource "aws_cloudwatch_event_rule" "event" {
   schedule_expression = local.user_locations[count.index]["expression"]
 
   tags = merge({ terraform_resource = "aws_cloudwatch_event_rule.event", terraform_count = count.index }, local.common_tags)
+}
+
+resource "aws_cloudwatch_event_target" "elasticsearch_curator" {
+  count = length(local.user_locations)
+
+  arn       = aws_lambda_function.airly.arn
+  rule      = aws_cloudwatch_event_rule.event[count.index].name
+  target_id = "${local.function_name}-${local.user_locations[count.index]["name"]}"
 }
 
 # permision for lambda to be invoked by cw event
