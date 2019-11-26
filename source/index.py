@@ -1,12 +1,16 @@
 import json
 import os
 import requests
+import boto3
 
 # parameters in env vars passed by Terraform during deployment
-max_distance = os.environ.get('MAX_DISTANCE')
 api_key = os.environ.get('API_KEY')
 base_url = os.environ.get('BASE_URL')
-measurements = os.environ.get('MEASUREMENTS')
+max_distance = os.environ.get('MAX_DISTANCE')
+measurements_nearest = os.environ.get('MEASUREMENTS_NEAREST')
+measurements_point = os.environ.get('MEASUREMENTS_POINT')
+sns_topic = os.environ.get('SNS_TOPIC')
+use_interpolation = os.environ.get('USE_INTERPOLATION').lower() == "true"
 
 # global config
 pollutants = [
@@ -33,22 +37,26 @@ locations = [
 
 
 # returns json payload of response call to airly api
-def call_airly_api(apikey, method, query_params=None):
+def call_airly_api(apikey, interpolation, query_params=None):
     headers = {
         'content-type': 'application/json',
         'apikey': apikey
     }
-    response = requests.get('{}/{}'.format(base_url, method), headers=headers, params=query_params)
+    method = measurements_point if interpolation else measurements_nearest
+    api_method = '{}{}'.format(base_url, method)
+    print(' -> Calling API: {} with parameters: {}'.format(api_method, query_params))
+    response = requests.get(api_method, headers=headers, params=query_params)
+    print(' -> API response: \n{}'.format(response.json()))
     return response.json()
 
 
 # returns dict of query parameters to call airly api
-def set_parameters(location, distance):
-    parameters = {
-        'lat': location.replace('#', '').split(',')[0],
-        'lng': location.split(',')[1],
-        'maxDistanceKM': distance
-    }
+def set_parameters(interpolation, location, distance):
+    parameters = {}
+    parameters['lat'] = location.replace('#', '').split(',')[0]
+    parameters['lng'] = location.split(',')[1]
+    if not interpolation:
+        parameters['maxDistanceKM'] = distance
     return parameters
 
 
@@ -112,6 +120,7 @@ def prepare_response(payload):
 # returns message for displaying
 def prepare_message(payload):
     message = ''
+    payload['indexes'].pop(0)
     for index in payload['indexes']:
         message += '{ico} {name}: {level} - {descr}{sep}'.format(
             ico=index['symbol'],
@@ -140,15 +149,35 @@ def prepare_message(payload):
     return message
 
 
+# sends message via sns
+def send_sns_message(topic, subject, body):
+    response = boto3.client('sns').publish(
+        TopicArn=topic,
+        Message=body,
+        Subject=subject,
+    )
+    return response
+
+
 # main lambda handler
 def handler(event, context):
-    # print("Event: {}".format(event))
-    params = set_parameters(locations[0]['latlng'], max_distance)
-    payload = call_airly_api(api_key, measurements, params)
+    print(' -> Received event:\n{}'.format(event))
+    parameters = set_parameters(use_interpolation, locations[0]['latlng'], max_distance)
+    payload = call_airly_api(api_key, use_interpolation, parameters)
     response = prepare_response(payload)
+    print(' -> Returned object:\n{}'.format(response))
+    subject = '{ico} {name}: {level} - {descr}'.format(
+        name=response['indexes'][0]['name'],
+        ico=response['indexes'][0]['symbol'],
+        level=response['indexes'][0]['level'],
+        descr=response['indexes'][0]['description'],
+    )
     message = prepare_message(response)
-    print("{}".format(message))
-    return payload
+    print(' -> Returned message: {}\n{}'.format(subject, message))
+    if sns_topic != "":
+        print(' -> Sending message to SNS: {}'.format(sns_topic))
+        send_sns_message(sns_topic, subject, message)
+    return response
 
 
 # call from outside only locally for testing

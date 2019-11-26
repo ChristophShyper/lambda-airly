@@ -1,35 +1,3 @@
-# variables are mapped to locals for convenience of refactoring, maintenance, testing and dynamic mapping
-locals {
-  common_tags = {
-    repository_name = "lambda-airly" # name of repository to easily identidy where to look for those resources' definitions
-  }                                  # list of common tags for resources
-  airly_api_key              = var.airly_api_key
-  airly_base_url             = var.airly_base_url
-  airly_max_distance         = var.airly_max_distance
-  airly_measurements_methods = var.airly_measurements_methods
-  log_retention              = var.log_retention
-  aws_access_key             = var.aws_access_key
-  aws_credentials_file       = var.aws_credentials_file
-  aws_secret_key             = var.aws_secret_key
-  aws_profile                = var.aws_profile
-  aws_region                 = var.aws_region
-  enable_bucket_creation     = var.enable_bucket_creation
-  enable_bucket_termination  = var.enable_bucket_termination
-  function_description       = var.function_description
-  function_dir               = var.function_dir
-  function_memory_limit      = var.function_memory_limit
-  function_name              = var.function_name
-  function_runtime           = var.function_runtime
-  function_timeout           = var.function_timeout
-  use_aws_keys               = var.aws_access_key != "" && var.aws_secret_key != ""
-  use_aws_credentials_file   = var.aws_credentials_file != "" && var.aws_profile != "" && ! local.use_aws_keys
-  user_email                 = var.user_email
-  user_locations             = var.user_locations
-  user_phone                 = var.user_phone
-  s3_bucket                  = var.s3_bucket == "" ? "${local.aws_profile}-metadata" : var.s3_bucket                                    # set default value if s3_bucket is not defined
-  s3_key                     = var.s3_key == "" ? "${local.common_tags.repository_name}/lambda/${local.function_name}.zip" : var.s3_key # set default value if s3_key is not defined
-}
-
 # use local backend, store tfstate on disk, just to simplify example
 terraform {
   required_version = "~> 0.12"
@@ -122,11 +90,13 @@ resource "aws_lambda_function" "airly" {
 
   environment {
     variables = {
-      API_KEY      = local.airly_api_key
-      BASE_URL     = local.airly_base_url
-      MAX_DISTANCE = local.airly_max_distance
-      MEASUREMENTS = local.airly_measurements_methods
-      TOPIC       = aws_sns_topic.airly.arn
+      API_KEY              = local.airly_api_key
+      BASE_URL             = local.airly_base_url
+      MAX_DISTANCE         = local.airly_max_distance
+      MEASUREMENTS_NEAREST = local.airly_measurements_nearest_method
+      MEASUREMENTS_POINT   = local.airly_measurements_point_method
+      SNS_TOPIC            = aws_sns_topic.airly.arn
+      USE_INTERPOLATION    = local.airly_use_interpolation
     }
   }
 

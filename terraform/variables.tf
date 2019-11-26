@@ -4,7 +4,7 @@ variable "airly_api_key" {
 }
 
 variable "airly_base_url" {
-  default     = "https://airapi.airly.eu/v2" # current version of API when code was being written
+  default     = "https://airapi.airly.eu" # current version of API when code was being written
   description = "Base URL of Airly API. String value. Default is \"https://airapi.airly.eu/v2\"."
   type        = string
 }
@@ -15,10 +15,21 @@ variable "airly_max_distance" {
   type        = number
 }
 
-variable "airly_measurements_methods" {
-  default     = "measurements/nearest" # current method string when code was being written
-  description = "API method to call for measurements from nearest installation. String value, defined in https://developer.airly.eu/docs#endpoints.meta.measurements. Default is \"easurements/nearest\"."
+variable "airly_measurements_nearest_method" {
+  default     = "/v2/measurements/nearest" # current method string when code was being written
+  description = "API method to call for measurements from nearest installation. String value, defined in https://developer.airly.eu/docs#endpoints.meta.measurements. Default is \"/v2/measurements/nearest\"."
   type        = string
+}
+
+variable "airly_measurements_point_method" {
+  default     = "/v2/measurements/point"
+  description = "API method to call for interpolated measurements. String value, defined in https://developer.airly.eu/docs#endpoints.measurements.point. Default is \"/v2/measurements/point\"."
+}
+
+variable "airly_use_interpolation" {
+  default     = false
+  description = "Swith for enabling (true) interpolated result at exact map point instead of nearest station. Boolean value. Default is false."
+  type        = bool
 }
 
 variable "aws_access_key" {
@@ -137,3 +148,4 @@ variable "s3_key" {
   description = "Name of s3 key on s3_bucket for Lambda package. String value. Default will be created in locals in main.tf."
   type        = string
 }
+
