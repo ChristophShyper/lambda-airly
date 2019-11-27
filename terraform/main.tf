@@ -11,7 +11,7 @@ terraform {
 # AWS provided details used
 # access_key and secret_key, or shared_credentials_file and profile
 provider "aws" {
-  region                  = local.aws_region
+  region = local.aws_region
 }
 
 # define Log Group for Lambda, so it can be deleted when stack is destroy
@@ -88,6 +88,7 @@ resource "aws_lambda_function" "airly" {
     variables = {
       API_KEY              = local.airly_api_key
       BASE_URL             = local.airly_base_url
+      FUNCTION_NAME        = local.function_name
       MAX_DISTANCE         = local.airly_max_distance
       MEASUREMENTS_NEAREST = local.airly_measurements_nearest_method
       MEASUREMENTS_POINT   = local.airly_measurements_point_method

@@ -1,10 +1,13 @@
 {
-  "id": "53dc4d37-cffa-4f76-80c9-8b7d4a4d2eaa",
+  "version": "0",
+  "id": "e1739856-9f36-c1a5-88ef-c0ec2b9c7e7b",
   "detail-type": "Scheduled Event",
   "source": "aws.events",
-  "account": "123456789012",
-  "time": "2015-10-08T16:53:06Z",
+  "account": "123456789123",
+  "time": "2019-11-26T23:00:43Z",
   "region": "eu-west-1",
-  "resources": [ "arn:aws:events:eu-west-1:123456789012:rule/MyScheduledRule" ],
+  "resources": [
+    "arn:aws:events:eu-west-1:123456789123:rule/airly-api-notifications-Sukiennice-50.06170-19.93734"
+  ],
   "detail": {}
 }

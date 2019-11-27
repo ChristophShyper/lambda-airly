@@ -6,17 +6,18 @@ import boto3
 # parameters in env vars passed by Terraform during deployment
 api_key = os.environ.get('API_KEY')
 base_url = os.environ.get('BASE_URL')
+function_name = os.environ.get('FUNCTION_NAME', 'airly-api-notifications')  # for easier local testing
 max_distance = os.environ.get('MAX_DISTANCE')
 measurements_nearest = os.environ.get('MEASUREMENTS_NEAREST')
 measurements_point = os.environ.get('MEASUREMENTS_POINT')
-sns_topic = os.environ.get('SNS_TOPIC')
-use_interpolation = os.environ.get('USE_INTERPOLATION').lower() == "true"
+sns_topic = os.environ.get('SNS_TOPIC', '')
+use_interpolation = os.environ.get('USE_INTERPOLATION').lower() == 'true'
 
 # global config
 pollutants = [
-    {'name': 'PM10', 'type': ' PM10', 'symbol': '\u2593'},
-    {'name': 'PM25', 'type': 'PM2.5', 'symbol': '\u2592'},
-    {'name': 'PM1', 'type': 'PM1.0', 'symbol': '\u2591'},
+    {'name': 'PM10', 'type': 'PM10', 'symbol': '\u2B1B'},
+    {'name': 'PM25', 'type': 'PM2.5', 'symbol': '\u25FE'},
+    {'name': 'PM1', 'type': 'PM1.0', 'symbol': '\u25AA'},
 ]
 index_levels = [
     {'name': 'VERY_LOW', 'symbol': '\U0001F600'},
@@ -24,15 +25,6 @@ index_levels = [
     {'name': 'MEDIUM', 'symbol': '\U0001F612'},
     {'name': 'HIGH', 'symbol': '\U0001F616'},
     {'name': 'VERY_HIGH', 'symbol': '\U0001F621'}
-]
-
-# test parameters TODO: delete
-test_file = 'test.json'
-locations = [
-    {
-        'latlng': '#50.06170,19.93734',
-        'name': 'Sukiennice',
-    },
 ]
 
 
@@ -45,6 +37,7 @@ def call_airly_api(apikey, interpolation, query_params=None):
     method = measurements_point if interpolation else measurements_nearest
     api_method = '{}{}'.format(base_url, method)
     print(' -> Calling API: {} with parameters: {}'.format(api_method, query_params))
+    # TODO: point call works only up to 1.5km from installation
     response = requests.get(api_method, headers=headers, params=query_params)
     print(' -> API response: \n{}'.format(response.json()))
     return response.json()
@@ -53,8 +46,8 @@ def call_airly_api(apikey, interpolation, query_params=None):
 # returns dict of query parameters to call airly api
 def set_parameters(interpolation, location, distance):
     parameters = {}
-    parameters['lat'] = location.replace('#', '').split(',')[0]
-    parameters['lng'] = location.split(',')[1]
+    parameters['lat'] = location['lat']
+    parameters['lng'] = location['lng']
     if not interpolation:
         parameters['maxDistanceKM'] = distance
     return parameters
@@ -158,14 +151,28 @@ def send_sns_message(topic, subject, body):
     return response
 
 
+def get_location(event):
+    event_rule_name = event['resources'][0].split("/")[1]
+    name_lat_lng = event_rule_name.replace("{}-".format(function_name), "").split("-")
+    location = {
+        'name': ' '.join(name_lat_lng[0:-2]),
+        'lat': name_lat_lng[-2],
+        'lng': name_lat_lng[-1],
+    }
+    return location
+
+
 # main lambda handler
 def handler(event, context):
     print(' -> Received event:\n{}'.format(event))
-    parameters = set_parameters(use_interpolation, locations[0]['latlng'], max_distance)
+    location = get_location(event)
+    print(' -> Using location: {}'.format(location))
+    parameters = set_parameters(use_interpolation, location, max_distance)
     payload = call_airly_api(api_key, use_interpolation, parameters)
     response = prepare_response(payload)
     print(' -> Returned object:\n{}'.format(response))
-    subject = '{ico} {descr}'.format(
+    subject = '{ico} {location}: {descr}'.format(
+        location=location['name'],
         name=response['indexes'][0]['name'],
         ico=response['indexes'][0]['symbol'],
         level=response['indexes'][0]['level'],
@@ -181,6 +188,7 @@ def handler(event, context):
 
 # call from outside only locally for testing
 if __name__ == '__main__':
+    test_file = 'test.json'
     with open(test_file) as json_file:
         test_data = json.load(json_file)
     handler(test_data, {})

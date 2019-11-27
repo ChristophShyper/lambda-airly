@@ -109,6 +109,7 @@ lambda-airly.iml
 
 # lambda
 /source/.dist
+/source/json
 
 # terraform
 /terraform/terraform.tfstate*
