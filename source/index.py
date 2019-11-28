@@ -3,7 +3,7 @@ import os
 import requests
 import boto3
 
-# parameters in env vars passed by Terraform during deployment
+# parameters in environment variables passed by Terraform during deployment
 api_key = os.environ.get('API_KEY')
 base_url = os.environ.get('BASE_URL')
 function_name = os.environ.get('FUNCTION_NAME', 'airly-api-notifications')  # for easier local testing
@@ -38,9 +38,8 @@ def call_airly_api(apikey, interpolation, query_params=None):
     method = measurements_point if interpolation else measurements_nearest
     api_method = '{}{}'.format(base_url, method)
     print(' -> Calling API: {} with parameters: {}'.format(api_method, query_params))
-    # TODO: point call works only up to 1.5km from installation
     response = requests.get(api_method, headers=headers, params=query_params)
-    print(' -> API response: \n{}'.format(response.json()))
+    # print(' -> API response: \n{}'.format(response.json()))
     return response.json()
 
 
@@ -157,12 +156,11 @@ def prepare_text(payload):
         )
     for poll in payload['pollutants']:
         percentage_available = True if poll['percentage'] != '' else False
-        percentage = '({})'.format(poll['percentage']) if percentage_available else ''
         message += '{ico} {poll}: {perc}{sep}'.format(
             ico=poll['symbol'],
             poll=poll['type'],
             val=poll['value'],
-            perc=percentage,
+            perc=poll['percentage'],
             sep='\n',
         ) if percentage_available else ''
     for weather in payload['weather']:
@@ -177,11 +175,17 @@ def prepare_text(payload):
 
 # sends message via sns
 def send_sns_message(topic, subject, body):
-    response = boto3.client('sns').publish(
-        TopicArn=topic,
-        Message=body,
-        Subject=subject,
-    )
+    if subject is not None:
+        response = boto3.client('sns').publish(
+            TopicArn=topic,
+            Message=body,
+            Subject=subject if subject is not None else None,
+        )
+    else:
+        response = boto3.client('sns').publish(
+            TopicArn=topic,
+            Message=body,
+        )
     return response
 
 
@@ -220,8 +224,8 @@ def handler(event, context):
         send_sns_message(sns_topic_email, subject, email)
     if sns_topic_text != "":
         print(' -> Sending text to SNS: {}'.format(sns_topic_text))
-        print(' -> Text content: {}\n{}'.format(None, text))
-        send_sns_message(sns_topic_email, subject, text)
+        print(' -> Text content: {}'.format(text))
+        send_sns_message(sns_topic_text, None, text)
     return response
 
 

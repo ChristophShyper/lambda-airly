@@ -91,7 +91,8 @@ data "aws_iam_policy_document" "airly" {
     actions = ["sns:Publish"]
     effect  = "Allow"
     resources = [
-      "arn:aws:sns:${data.aws_region.default.name}:${data.aws_caller_identity.default.account_id}:${local.function_name}",
+      "arn:aws:sns:${data.aws_region.default.name}:${data.aws_caller_identity.default.account_id}:${local.function_name}-email",
+      "arn:aws:sns:${data.aws_region.default.name}:${data.aws_caller_identity.default.account_id}:${local.function_name}-text",
     ]
   }
 }
