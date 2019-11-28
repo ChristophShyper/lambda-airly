@@ -9,7 +9,6 @@ locals {
   airly_measurements_nearest_method = var.airly_measurements_nearest_method
   airly_measurements_point_method   = var.airly_measurements_point_method
   airly_use_interpolation           = var.airly_use_interpolation
-  aws_profile                       = var.aws_profile
   aws_region                        = var.aws_region
   enable_bucket_creation            = var.enable_bucket_creation
   enable_bucket_termination         = var.enable_bucket_termination
@@ -23,7 +22,7 @@ locals {
   user_email                        = var.user_email
   user_locations                    = var.user_locations
   user_phone                        = var.user_phone
-  s3_bucket                         = var.s3_bucket == "" ? "${local.aws_profile}-metadata" : var.s3_bucket                                    # set default value if s3_bucket is not defined
+  s3_bucket                         = var.s3_bucket
   s3_key                            = var.s3_key == "" ? "${local.common_tags.repository_name}/lambda/${local.function_name}.zip" : var.s3_key # set default value if s3_key is not defined
 }
 

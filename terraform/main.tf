@@ -92,7 +92,8 @@ resource "aws_lambda_function" "airly" {
       MAX_DISTANCE         = local.airly_max_distance
       MEASUREMENTS_NEAREST = local.airly_measurements_nearest_method
       MEASUREMENTS_POINT   = local.airly_measurements_point_method
-      SNS_TOPIC            = aws_sns_topic.airly.arn
+      SNS_TOPIC_EMAIL      = aws_sns_topic.airly_email.arn
+      SNS_TOPIC_TEXT       = aws_sns_topic.airly_text.arn
       USE_INTERPOLATION    = local.airly_use_interpolation
     }
   }
@@ -100,27 +101,38 @@ resource "aws_lambda_function" "airly" {
   depends_on = [
     aws_iam_role.airly,
     null_resource.package,
-    aws_sns_topic.airly,
+    aws_sns_topic.airly_email,
+    aws_sns_topic.airly_text,
   ]
 
   tags = merge({ terraform_resource = "aws_lambda_function.airly", terraform_count = "" }, local.common_tags)
 }
 
-resource "aws_sns_topic" "airly" {
+# topic for email notifications
+resource "aws_sns_topic" "airly_email" {
   display_name = title(replace(local.function_name, "-", " "))
-  name         = local.function_name
+  name         = "${local.function_name}-email"
 
-  tags = merge({ terraform_resource = "aws_sns_topic.airly", terraform_count = "" }, local.common_tags)
+  tags = merge({ terraform_resource = "aws_sns_topic.airly_email", terraform_count = "" }, local.common_tags)
 }
 
+# topic for sms notifications
+resource "aws_sns_topic" "airly_text" {
+  display_name = title(replace(local.function_name, "-", " "))
+  name         = "${local.function_name}-text"
+
+  tags = merge({ terraform_resource = "aws_sns_topic.airly_text", terraform_count = "" }, local.common_tags)
+}
+
+# add phone to sns to receive sms notifications
 resource "aws_sns_topic_subscription" "phone" {
   count = local.user_phone != "" ? 1 : 0
 
   endpoint  = local.user_phone
   protocol  = "sms"
-  topic_arn = aws_sns_topic.airly.arn
+  topic_arn = aws_sns_topic.airly_text.arn
 
-  depends_on = [aws_sns_topic.airly]
+  depends_on = [aws_sns_topic.airly_text]
 }
 
 resource "aws_cloudformation_stack" "email" {
@@ -130,10 +142,10 @@ resource "aws_cloudformation_stack" "email" {
   template_body = file("cloudformation.email.subscribe.yml")
   parameters = {
     EmailAddress = local.user_email
-    TopicArn     = aws_sns_topic.airly.arn
+    TopicArn     = aws_sns_topic.airly_email.arn
   }
 
-  depends_on = [aws_sns_topic.airly]
+  depends_on = [aws_sns_topic.airly_email]
 
   tags = merge({ terraform_resource = "aws_cloudformation_stack.email", terraform_count = count.index }, local.common_tags)
 }
@@ -149,7 +161,8 @@ resource "aws_cloudwatch_event_rule" "event" {
   tags = merge({ terraform_resource = "aws_cloudwatch_event_rule.event", terraform_count = count.index }, local.common_tags)
 }
 
-resource "aws_cloudwatch_event_target" "elasticsearch_curator" {
+# target for event rule
+resource "aws_cloudwatch_event_target" "event" {
   count = length(local.user_locations)
 
   arn       = aws_lambda_function.airly.arn

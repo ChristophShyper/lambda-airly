@@ -32,27 +32,6 @@ variable "airly_use_interpolation" {
   type        = bool
 }
 
-variable "aws_access_key" {
-  description = "Access key of IAM user used to deploy infrastructure. Set it together with aws_secret_key, or set aws_credentials_file and aws_profile. String value. No default."
-  type        = string
-}
-
-variable "aws_credentials_file" {
-  default     = "$HOME/.aws/credentials" # default value used by Linux or WSL
-  description = "Location of AWS credentials file to use together with aws_profile name. On different operaing systems may require change. String value. Default is \"$HOME/.aws/credentials\"."
-  type        = string
-}
-
-variable "aws_profile" {
-  description = "Name of AWS profile defined in aws_credentials_file of IAM user used to deploy infrastructure. Set it together with aws_credentials_file, or set aws_access_key and aws_secret_key. String value. No default."
-  type        = string
-}
-
-variable "aws_secret_key" {
-  description = "Secret key of IAM user used to deploy infrastructure. Set it together with aws_access_key, or set aws_credentials_file and aws_profile. String value. No default."
-  type        = string
-}
-
 variable "aws_region" {
   default     = "eu-west-1" # main region in Europa, having most up to date features
   description = "Name of AWS region used for deploying infrastructure. String value. Default is \"eu-west-1\"."

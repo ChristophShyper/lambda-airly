@@ -10,7 +10,8 @@ function_name = os.environ.get('FUNCTION_NAME', 'airly-api-notifications')  # fo
 max_distance = os.environ.get('MAX_DISTANCE')
 measurements_nearest = os.environ.get('MEASUREMENTS_NEAREST')
 measurements_point = os.environ.get('MEASUREMENTS_POINT')
-sns_topic = os.environ.get('SNS_TOPIC', '')
+sns_topic_email = os.environ.get('SNS_TOPIC_EMAIL', '')
+sns_topic_text = os.environ.get('SNS_TOPIC_TEXT', '')
 use_interpolation = os.environ.get('USE_INTERPOLATION').lower() == 'true'
 
 # global config
@@ -108,8 +109,8 @@ def prepare_response(payload):
     return response
 
 
-# returns message for displaying
-def prepare_message(payload):
+# returns message for displaying as email
+def prepare_email(payload):
     message = ''
     # payload['indexes'].pop(0)
     for index in payload['indexes']:
@@ -131,6 +132,39 @@ def prepare_message(payload):
             perc=percentage,
             sep='\n',
         )
+    for weather in payload['weather']:
+        message += '{ico} {name}: {val}{sep}'.format(
+            ico=weather['symbol'],
+            name=weather['name'],
+            val=weather['value'],
+            sep='\n',
+        )
+    return message
+
+
+# returns message for displaying as sms
+def prepare_text(payload):
+    message = '\n'  # needed for sms since it already begins with some string in first line
+    # payload['indexes'].pop(0)
+    for index in payload['indexes']:
+        message += '{ico} {name}: {level}{sep}'.format(
+            ico=index['symbol'],
+            name=index['name'],
+            level=index['level'],
+            descr=index['description'],
+            adv=index['advice'],
+            sep='\n',
+        )
+    for poll in payload['pollutants']:
+        percentage_available = True if poll['percentage'] != '' else False
+        percentage = '({})'.format(poll['percentage']) if percentage_available else ''
+        message += '{ico} {poll}: {perc}{sep}'.format(
+            ico=poll['symbol'],
+            poll=poll['type'],
+            val=poll['value'],
+            perc=percentage,
+            sep='\n',
+        ) if percentage_available else ''
     for weather in payload['weather']:
         message += '{ico} {name}: {val}{sep}'.format(
             ico=weather['symbol'],
@@ -178,11 +212,16 @@ def handler(event, context):
         level=response['indexes'][0]['level'],
         descr=response['indexes'][0]['description'],
     )
-    message = prepare_message(response)
-    print(' -> Returned message: {}\n{}'.format(subject, message))
-    if sns_topic != "":
-        print(' -> Sending message to SNS: {}'.format(sns_topic))
-        send_sns_message(sns_topic, subject, message)
+    email = prepare_email(response)
+    text = prepare_text(response)
+    if sns_topic_email != "":
+        print(' -> Sending email to SNS: {}'.format(sns_topic_email))
+        print(' -> Email content: {}\n{}'.format(subject, email))
+        send_sns_message(sns_topic_email, subject, email)
+    if sns_topic_text != "":
+        print(' -> Sending text to SNS: {}'.format(sns_topic_text))
+        print(' -> Text content: {}\n{}'.format(None, text))
+        send_sns_message(sns_topic_email, subject, text)
     return response
 
 
