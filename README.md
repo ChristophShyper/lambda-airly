@@ -6,6 +6,16 @@
 
 Lambda code is writen in [Python](https://www.python.org/) and is rather easy to understand. As it only calls API and filters the result.
 
+## Email notification
+Full information about at all indexes, pollutants and weather conditions.<br>  
+Example of email received when there is bad air quality at location named Home:
+![Email notification example](https://raw.githubusercontent.com/Krzysztof-Szyper-Epam/lambda-airly/master/images/email.png)
+
+## SMS notification
+Only basic information, about main index value, percentage of pollutants indexes, and weather conditions.<br>
+Example of SMS received when there is good air quality at location named Home.
+![SMS notification example](https://raw.githubusercontent.com/Krzysztof-Szyper-Epam/lambda-airly/master/images/sms.png)
+
 # Prerequisites
 - [AWS](https://aws.amazon.com/) account, free tier should be enough to run it.
 - [Airly devloper](https://developer.airly.eu/) account with [API key](https://developer.airly.eu/docs#general.authentication)
