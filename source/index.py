@@ -60,7 +60,8 @@ def prepare_response(payload):
         response['indexes'].append({
             'name': index['name'],
             'level': index['level'],
-            'symbol': [index_level['symbol'] for index_level in index_levels if index_level['name'] == index['level']][0],
+            'symbol': [index_level['symbol'] for index_level in index_levels if index_level['name'] == index['level']][
+                0],
             'description': index['description'],
             'advice': index['advice'],
         })
@@ -82,13 +83,13 @@ def prepare_response(payload):
     temperature_available = True if 'TEMPERATURE' in [value['name'] for value in
                                                       payload['current']['values']] else False
     temperature = str([value['value'] for value in payload['current']['values'] if value['name'] == 'TEMPERATURE'][
-                      0]) + '°C' if temperature_available else ''
+                          0]) + '°C' if temperature_available else ''
     pressure_available = True if 'PRESSURE' in [value['name'] for value in payload['current']['values']] else False
     pressure = str([value['value'] for value in payload['current']['values'] if value['name'] == 'PRESSURE'][
-                   0]) + 'hPa' if pressure_available else ''
+                       0]) + 'hPa' if pressure_available else ''
     humidity_available = True if 'HUMIDITY' in [value['name'] for value in payload['current']['values']] else False
     humidity = str([value['value'] for value in payload['current']['values'] if value['name'] == 'HUMIDITY'][
-                   0]) + '%' if humidity_available else ''
+                       0]) + '%' if humidity_available else ''
     response['weather'] = []
     response['weather'].append({
         'symbol': '\U0001F321',
@@ -142,8 +143,9 @@ def prepare_email(payload):
 
 
 # returns message for displaying as sms
-def prepare_text(payload):
-    message = '\n'  # needed for sms since it already begins with some string in first line
+def prepare_text(payload, location):
+    message = '{}\n'.format(
+        location['name'])  # newline needed for sms since it already begins with some string in first line
     # payload['indexes'].pop(0)
     for index in payload['indexes']:
         message += '{ico} {name}: {level}{sep}'.format(
@@ -217,7 +219,7 @@ def handler(event, context):
         descr=response['indexes'][0]['description'],
     )
     email = prepare_email(response)
-    text = prepare_text(response)
+    text = prepare_text(response, location)
     if sns_topic_email != "":
         print(' -> Sending email to SNS: {}'.format(sns_topic_email))
         print(' -> Email content: {}\n{}'.format(subject, email))
