@@ -16,6 +16,14 @@ Only basic information, about main index value, percentage of pollutants indexes
 Example of SMS received when there is good air quality at location named Home.
 ![SMS notification example](https://raw.githubusercontent.com/Krzysztof-Szyper-Epam/lambda-airly/master/images/sms.png)
 
+# TODO list
+* Add unit tests for Python code
+* Add Lambda functional testing with [lambci/docker-lambda](https://github.com/lambci/docker-lambda)
+* Create Terraform module from the current setup + add tags
+* Add simple scripts for single deployment. 
+Use [Krzysztof-Szyper-Epam/docker-terragrunt](https://github.com/Krzysztof-Szyper-Epam/docker-terragrunt), so the only prerequisite will be Docker. 
+* Add DynamoDB table for location lists. Allow different combinations of location, trigger and topic.
+
 # Prerequisites
 - [AWS](https://aws.amazon.com/) account, free tier should be enough to run it.
 - [Airly devloper](https://developer.airly.eu/) account with [API key](https://developer.airly.eu/docs#general.authentication)
